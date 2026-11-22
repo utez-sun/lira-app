@@ -1,7 +1,6 @@
 package com.lira.tracker.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,15 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lira.tracker.data.model.ListenerRecord
-import com.lira.tracker.ui.theme.DarkBorder
-import com.lira.tracker.ui.theme.DarkSurface
 import com.lira.tracker.ui.theme.DeltaNegative
 import com.lira.tracker.ui.theme.DeltaPositive
 import com.lira.tracker.ui.theme.DeltaZero
-import com.lira.tracker.ui.theme.LiraHeartCoral
-import com.lira.tracker.ui.theme.TextMuted
-import com.lira.tracker.ui.theme.TextPrimary
-import com.lira.tracker.ui.theme.TextSecondary
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -57,16 +49,24 @@ fun ListenersChart(
         mutableStateOf<ListenerRecord?>(records.lastOrNull())
     }
 
+    val themePrimary = MaterialTheme.colorScheme.primary
+    val themeSurface = MaterialTheme.colorScheme.surface
+    val themeOnSurface = MaterialTheme.colorScheme.onSurface
+    val themeOnSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val themeOutline = MaterialTheme.colorScheme.outline
+
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(DarkBorder, DarkBorder)))
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = themeSurface),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = Brush.horizontalGradient(listOf(themeOutline.copy(alpha = 0.6f), themeOutline.copy(alpha = 0.6f)))
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -77,8 +77,8 @@ fun ListenersChart(
                     Text(
                         text = "Динамика слушателей",
                         style = MaterialTheme.typography.titleMedium,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold
+                        color = themeOnSurface,
+                        fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = if (selectedRecord != null) {
@@ -87,7 +87,7 @@ fun ListenersChart(
                             "График ежедневного прироста"
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = TextSecondary
+                        color = themeOnSurfaceVariant
                     )
                 }
 
@@ -109,7 +109,7 @@ fun ListenersChart(
                         Text(
                             text = numberFormatted,
                             style = MaterialTheme.typography.titleMedium,
-                            color = LiraHeartCoral,
+                            color = themePrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
@@ -128,13 +128,13 @@ fun ListenersChart(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(190.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Нет данных для построения графика.\nНажмите «Получить данные сейчас».",
+                        text = "Данных пока нет.\nНажмите «Получить данные сейчас», чтобы зафиксировать первую точку.",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextMuted,
+                        color = themeOnSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -143,32 +143,31 @@ fun ListenersChart(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(190.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = "Зафиксирована первая точка (${record.dateString})",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = TextSecondary
+                            color = themeOnSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "${NumberFormat.getNumberInstance(Locale.FRANCE).format(record.listeners)} слушателей",
-                            style = MaterialTheme.typography.titleLarge,
-                            color = LiraHeartCoral,
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = themePrimary,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Линия динамики появится после следующих измерений",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted
+                            color = themeOnSurfaceVariant.copy(alpha = 0.7f)
                         )
                     }
                 }
             } else {
-                // Отрисовка графика на Canvas
                 val minVal = records.minOf { it.listeners }
                 val maxVal = records.maxOf { it.listeners }
                 val range = if (maxVal == minVal) 10L else (maxVal - minVal)
@@ -180,7 +179,7 @@ fun ListenersChart(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(200.dp)
+                        .height(210.dp)
                 ) {
                     Canvas(
                         modifier = Modifier
@@ -199,23 +198,23 @@ fun ListenersChart(
                             }
                     ) {
                         val width = size.width
-                        val height = size.height - 30.dp.toPx() // Оставляем место снизу для подписей
+                        val height = size.height - 30.dp.toPx()
                         val count = records.size
                         val stepX = width / (count - 1)
 
-                        // 1. Горизонтальные направляющие сетки
+                        // Горизонтальные линии сетки
                         val gridLines = 3
                         for (i in 0..gridLines) {
                             val y = height * (i.toFloat() / gridLines)
                             drawLine(
-                                color = Color.White.copy(alpha = 0.06f),
+                                color = themeOnSurface.copy(alpha = 0.07f),
                                 start = Offset(0f, y),
                                 end = Offset(width, y),
                                 strokeWidth = 1.dp.toPx()
                             )
                         }
 
-                        // 2. Вычисление координат точек
+                        // Вычисление координат точек
                         val points = records.mapIndexed { index, rec ->
                             val x = index * stepX
                             val normalizedY = (rec.listeners - chartMin) / totalSpan
@@ -223,7 +222,7 @@ fun ListenersChart(
                             Offset(x, y)
                         }
 
-                        // 3. Построение сглаженной кривой Безье
+                        // Кривая Безье
                         val strokePath = Path().apply {
                             if (points.isNotEmpty()) {
                                 moveTo(points[0].x, points[0].y)
@@ -239,7 +238,7 @@ fun ListenersChart(
                             }
                         }
 
-                        // 4. Заливка градиентом под графиком
+                        // Градиентная заливка
                         val fillPath = Path().apply {
                             addPath(strokePath)
                             lineTo(points.last().x, height)
@@ -251,8 +250,8 @@ fun ListenersChart(
                             path = fillPath,
                             brush = Brush.verticalGradient(
                                 colors = listOf(
-                                    LiraHeartCoral.copy(alpha = 0.35f),
-                                    LiraHeartCoral.copy(alpha = 0.05f),
+                                    themePrimary.copy(alpha = 0.35f),
+                                    themePrimary.copy(alpha = 0.04f),
                                     Color.Transparent
                                 ),
                                 startY = 0f,
@@ -260,46 +259,49 @@ fun ListenersChart(
                             )
                         )
 
-                        // 5. Отрисовка основной линии графика
+                        // Линия графика
                         drawPath(
                             path = strokePath,
-                            color = LiraHeartCoral,
+                            color = themePrimary,
                             style = Stroke(
-                                width = 3.dp.toPx(),
+                                width = 3.5.dp.toPx(),
                                 cap = StrokeCap.Round
                             )
                         )
 
-                        // 6. Отрисовка точек
+                        // Точки
                         points.forEachIndexed { idx, pt ->
                             val isSelected = records[idx] == selectedRecord
                             if (isSelected) {
-                                // Линия-указатель выбранной точки
                                 drawLine(
-                                    color = Color.White.copy(alpha = 0.35f),
+                                    color = themeOnSurface.copy(alpha = 0.35f),
                                     start = Offset(pt.x, 0f),
                                     end = Offset(pt.x, height),
                                     strokeWidth = 1.5.dp.toPx()
                                 )
-                                // Внешний ореол выбранной точки
                                 drawCircle(
-                                    color = LiraHeartCoral.copy(alpha = 0.3f),
-                                    radius = 9.dp.toPx(),
+                                    color = themePrimary.copy(alpha = 0.3f),
+                                    radius = 10.dp.toPx(),
                                     center = pt
                                 )
                                 drawCircle(
-                                    color = Color.White,
-                                    radius = 4.dp.toPx(),
+                                    color = themePrimary,
+                                    radius = 5.dp.toPx(),
+                                    center = pt
+                                )
+                                drawCircle(
+                                    color = themeSurface,
+                                    radius = 2.5.dp.toPx(),
                                     center = pt
                                 )
                             } else {
                                 drawCircle(
-                                    color = DarkSurface,
-                                    radius = 4.dp.toPx(),
+                                    color = themeSurface,
+                                    radius = 4.5.dp.toPx(),
                                     center = pt
                                 )
                                 drawCircle(
-                                    color = LiraHeartCoral,
+                                    color = themePrimary,
                                     radius = 2.5.dp.toPx(),
                                     center = pt
                                 )
@@ -307,7 +309,7 @@ fun ListenersChart(
                         }
                     }
 
-                    // Подписи крайних дат снизу
+                    // Подписи крайних дат
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -318,22 +320,22 @@ fun ListenersChart(
                         Text(
                             text = records.first().dateString,
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted,
-                            fontSize = 10.sp
+                            color = themeOnSurfaceVariant,
+                            fontSize = 11.sp
                         )
                         if (records.size > 2) {
                             Text(
                                 text = records[records.size / 2].dateString,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = TextMuted,
-                                fontSize = 10.sp
+                                color = themeOnSurfaceVariant,
+                                fontSize = 11.sp
                             )
                         }
                         Text(
                             text = records.last().dateString,
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextMuted,
-                            fontSize = 10.sp
+                            color = themeOnSurfaceVariant,
+                            fontSize = 11.sp
                         )
                     }
                 }
