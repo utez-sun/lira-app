@@ -9,11 +9,18 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+
+data class SyncResult(
+    val record: ListenerRecord,
+    val isAddedOrUpdated: Boolean,
+    val message: String
+)
 
 class ArtistRepository(
     private val dao: ListenerDao,
@@ -32,6 +39,10 @@ class ArtistRepository(
     val allRecordsDesc: Flow<List<ListenerRecord>> = dao.getAllDescending()
 
     suspend fun getLatestRecord(): ListenerRecord? = dao.getLatest()
+
+    suspend fun clearHistory() = withContext(Dispatchers.IO) {
+        dao.clearAll()
+    }
 
     suspend fun fetchCurrentListeners(artistId: String): Result<Long> = withContext(Dispatchers.IO) {
         try {
@@ -108,14 +119,12 @@ class ArtistRepository(
 
     private fun parseListenersFromHtml(html: String): Long? {
         try {
-            // Поиск в JSON-структурах страницы
             val jsonPattern = Pattern.compile("\"(?:lastMonthListeners|listeners|monthlyListeners)\"\\s*:\\s*(\\d+)")
             val jsonMatcher = jsonPattern.matcher(html)
             if (jsonMatcher.find()) {
                 return jsonMatcher.group(1)?.toLongOrNull()
             }
 
-            // Поиск по текстовому шаблону: "1 250 слушателей за месяц"
             val textPattern = Pattern.compile("([\\d\\s\\u00a0]+)\\s*слушател[яейь]\\s*(?:за|в)\\s*месяц", Pattern.CASE_INSENSITIVE)
             val textMatcher = textPattern.matcher(html)
             if (textMatcher.find()) {
@@ -124,7 +133,6 @@ class ArtistRepository(
                 if (parsed != null) return parsed
             }
 
-            // Альтернативный порядок слов
             val altPattern = Pattern.compile("слушател[яейь]\\s*(?:за|в)\\s*месяц[^\\d]*([\\d\\s\\u00a0]+)", Pattern.CASE_INSENSITIVE)
             val altMatcher = altPattern.matcher(html)
             if (altMatcher.find()) {
@@ -133,12 +141,12 @@ class ArtistRepository(
                 if (parsed != null) return parsed
             }
         } catch (e: Exception) {
-            // Игнорируем и возвращаем null
+            // Игнорируем ошибку парсинга
         }
         return null
     }
 
-    suspend fun syncNow(): Result<ListenerRecord> = withContext(Dispatchers.IO) {
+    suspend fun syncNow(): Result<SyncResult> = withContext(Dispatchers.IO) {
         val artistId = preferences.artistId
         val fetchResult = fetchCurrentListeners(artistId)
 
@@ -153,6 +161,60 @@ class ArtistRepository(
         val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
         val todayStr = dateFormat.format(Date(now))
 
+        val countFormatted = NumberFormat.getNumberInstance(Locale.FRANCE).format(currentCount)
+
+        // Проверяем, есть ли уже запись за сегодня
+        val todayRecord = dao.getByDate(todayStr)
+
+        if (todayRecord != null) {
+            // Если в текущий день данные уже получались и не отличаются — НЕ добавляем новую точку на график!
+            if (todayRecord.listeners == currentCount) {
+                preferences.lastSyncTimestamp = now
+                preferences.lastSyncStatus = "Данные не изменились ($countFormatted)"
+                return@withContext Result.success(
+                    SyncResult(
+                        record = todayRecord,
+                        isAddedOrUpdated = false,
+                        message = "Данные за сегодня уже зафиксированы и не изменились ($countFormatted сл.)"
+                    )
+                )
+            } else {
+                // Если за сегодня число изменилось, обновляем существующую запись сегодняшнего дня
+                val previousRecords = dao.getAllDescending()
+                val latestBeforeToday = dao.getLatest()
+                val delta = if (latestBeforeToday != null && latestBeforeToday.id != todayRecord.id) {
+                    currentCount - latestBeforeToday.listeners
+                } else {
+                    currentCount - todayRecord.listeners
+                }
+
+                val updatedRecord = todayRecord.copy(
+                    timestamp = now,
+                    listeners = currentCount,
+                    delta = delta
+                )
+                dao.update(updatedRecord)
+
+                preferences.lastSyncTimestamp = now
+                preferences.lastSyncStatus = "Обновлено за сегодня: $countFormatted"
+
+                val deltaStr = when {
+                    delta > 0 -> "+${NumberFormat.getNumberInstance(Locale.FRANCE).format(delta)}"
+                    delta < 0 -> "-${NumberFormat.getNumberInstance(Locale.FRANCE).format(kotlin.math.abs(delta))}"
+                    else -> "0"
+                }
+
+                return@withContext Result.success(
+                    SyncResult(
+                        record = updatedRecord,
+                        isAddedOrUpdated = true,
+                        message = "Показатель за сегодня обновлен: $countFormatted ($deltaStr)"
+                    )
+                )
+            }
+        }
+
+        // Если за сегодня записей еще нет — создаем новую запись
         val latestRecord = dao.getLatest()
         val delta = if (latestRecord != null) {
             currentCount - latestRecord.listeners
@@ -169,8 +231,20 @@ class ArtistRepository(
 
         dao.insert(newRecord)
         preferences.lastSyncTimestamp = now
-        preferences.lastSyncStatus = "Успешно: $currentCount"
+        preferences.lastSyncStatus = "Зафиксировано: $countFormatted"
 
-        Result.success(newRecord)
+        val deltaStr = when {
+            delta > 0 -> "+${NumberFormat.getNumberInstance(Locale.FRANCE).format(delta)}"
+            delta < 0 -> "-${NumberFormat.getNumberInstance(Locale.FRANCE).format(kotlin.math.abs(delta))}"
+            else -> "0"
+        }
+
+        Result.success(
+            SyncResult(
+                record = newRecord,
+                isAddedOrUpdated = true,
+                message = "Новая точка зафиксирована: $countFormatted ($deltaStr)"
+            )
+        )
     }
 }
