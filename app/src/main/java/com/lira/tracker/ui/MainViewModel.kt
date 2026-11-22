@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.Locale
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -41,14 +39,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastSyncTimestamp = MutableStateFlow(preferences.lastSyncTimestamp)
     val lastSyncTimestamp: StateFlow<Long> = _lastSyncTimestamp.asStateFlow()
 
+    private val _isDarkTheme = MutableStateFlow(preferences.isDarkTheme)
+    val isDarkTheme: StateFlow<Boolean> = _isDarkTheme.asStateFlow()
+
+    private val _appStyle = MutableStateFlow(preferences.appStyle)
+    val appStyle: StateFlow<String> = _appStyle.asStateFlow()
+
+    // Вкладка: 0 = Главная, 1 = Настройки
+    private val _selectedTab = MutableStateFlow(0)
+    val selectedTab: StateFlow<Int> = _selectedTab.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _userMessage = MutableStateFlow<String?>(null)
     val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
 
+    fun selectTab(index: Int) {
+        _selectedTab.value = index
+    }
+
     fun clearUserMessage() {
         _userMessage.value = null
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        preferences.isDarkTheme = isDark
+        _isDarkTheme.value = isDark
+    }
+
+    fun setAppStyle(style: String) {
+        preferences.appStyle = style
+        _appStyle.value = style
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            repository.clearHistory()
+            _userMessage.value = "Журнал измерений очищен."
+        }
     }
 
     fun fetchNow() {
@@ -57,15 +86,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val result = repository.syncNow()
                 if (result.isSuccess) {
-                    val record = result.getOrThrow()
-                    val numFormatted = NumberFormat.getNumberInstance(Locale.FRANCE).format(record.listeners)
-                    val deltaFormatted = when {
-                        record.delta > 0 -> "+${NumberFormat.getNumberInstance(Locale.FRANCE).format(record.delta)}"
-                        record.delta < 0 -> "-${NumberFormat.getNumberInstance(Locale.FRANCE).format(kotlin.math.abs(record.delta))}"
-                        else -> "0"
-                    }
+                    val syncResult = result.getOrThrow()
                     _lastSyncTimestamp.value = System.currentTimeMillis()
-                    _userMessage.value = "Обновлено: $numFormatted ($deltaFormatted)"
+                    _userMessage.value = syncResult.message
                 } else {
                     val err = result.exceptionOrNull()?.localizedMessage ?: "Ошибка связи"
                     _userMessage.value = "Не удалось обновить: $err"
@@ -87,10 +110,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _syncHour.value = newHour
         _syncMinute.value = newMinute
 
-        // Перепланируем фоновую работу
         SyncScheduler.scheduleDailySync(getApplication())
 
         val timeStr = "${newHour.toString().padStart(2, '0')}:${newMinute.toString().padStart(2, '0')}"
-        _userMessage.value = "Настройки сохранены: ID $newArtistId, обновление в $timeStr"
+        _userMessage.value = "Настройки сохранены: ID $newArtistId, запуск в $timeStr"
     }
 }
