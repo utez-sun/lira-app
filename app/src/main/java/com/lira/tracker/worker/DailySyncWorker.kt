@@ -27,8 +27,12 @@ class DailySyncWorker(
         val result = repository.syncNow()
 
         return if (result.isSuccess) {
-            val record = result.getOrThrow()
-            showNotification(record.listeners, record.delta)
+            val syncResult = result.getOrThrow()
+            val record = syncResult.record
+
+            // Показываем уведомление
+            showNotification(record.listeners, record.delta, syncResult.isAddedOrUpdated)
+
             // Планируем следующий запуск на завтра
             SyncScheduler.scheduleDailySync(context)
             Result.success()
@@ -41,7 +45,7 @@ class DailySyncWorker(
         }
     }
 
-    private fun showNotification(listeners: Long, delta: Long) {
+    private fun showNotification(listeners: Long, delta: Long, isUpdated: Boolean) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -64,7 +68,11 @@ class DailySyncWorker(
             else -> "0"
         }
 
-        val contentText = "$formattedListeners ($deltaText со вчера)"
+        val contentText = if (isUpdated) {
+            "$formattedListeners ($deltaText со вчера)"
+        } else {
+            "$formattedListeners (без изменений за сегодня)"
+        }
 
         val notification = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
