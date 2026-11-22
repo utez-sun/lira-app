@@ -31,22 +31,35 @@ class AppPreferences(context: Context) {
         get() = prefs.getString(KEY_LAST_SYNC_STATUS, "") ?: ""
         set(value) = prefs.edit().putString(KEY_LAST_SYNC_STATUS, value).apply()
 
+    // Настройка темы: true = темная, false = светлая
+    var isDarkTheme: Boolean
+        get() = prefs.getBoolean(KEY_IS_DARK_THEME, true)
+        set(value) = prefs.edit().putBoolean(KEY_IS_DARK_THEME, value).apply()
+
+    // Стиль оформления: "CORAL" (LIRA Coral) или "NEON_WAVE" (Неоновая волна)
+    var appStyle: String
+        get() = prefs.getString(KEY_APP_STYLE, STYLE_CORAL) ?: STYLE_CORAL
+        set(value) = prefs.edit().putString(KEY_APP_STYLE, value).apply()
+
     fun observeSettings(): Flow<SettingsData> = callbackFlow {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
             trySend(
                 SettingsData(
                     artistId = artistId,
                     syncHour = syncHour,
-                    syncMinute = syncMinute
+                    syncMinute = syncMinute,
+                    isDarkTheme = isDarkTheme,
+                    appStyle = appStyle
                 )
             )
         }
-        // Отправляем текущее значение сразу
         trySend(
             SettingsData(
                 artistId = artistId,
                 syncHour = syncHour,
-                syncMinute = syncMinute
+                syncMinute = syncMinute,
+                isDarkTheme = isDarkTheme,
+                appStyle = appStyle
             )
         )
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -56,7 +69,9 @@ class AppPreferences(context: Context) {
     data class SettingsData(
         val artistId: String,
         val syncHour: Int,
-        val syncMinute: Int
+        val syncMinute: Int,
+        val isDarkTheme: Boolean,
+        val appStyle: String
     )
 
     companion object {
@@ -65,9 +80,14 @@ class AppPreferences(context: Context) {
         private const val KEY_SYNC_MINUTE = "pref_sync_minute"
         private const val KEY_LAST_SYNC_TIMESTAMP = "pref_last_sync_timestamp"
         private const val KEY_LAST_SYNC_STATUS = "pref_last_sync_status"
+        private const val KEY_IS_DARK_THEME = "pref_is_dark_theme"
+        private const val KEY_APP_STYLE = "pref_app_style"
 
         const val DEFAULT_ARTIST_ID = "24578741"
         const val DEFAULT_SYNC_HOUR = 15
         const val DEFAULT_SYNC_MINUTE = 0
+
+        const val STYLE_CORAL = "CORAL"
+        const val STYLE_NEON_WAVE = "NEON_WAVE"
     }
 }
