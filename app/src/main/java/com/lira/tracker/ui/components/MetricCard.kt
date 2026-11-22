@@ -28,21 +28,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lira.tracker.data.model.ListenerRecord
-import com.lira.tracker.ui.theme.DarkBorder
-import com.lira.tracker.ui.theme.DarkSurface
-import com.lira.tracker.ui.theme.DarkSurfaceVariant
 import com.lira.tracker.ui.theme.DeltaNegative
 import com.lira.tracker.ui.theme.DeltaPositive
 import com.lira.tracker.ui.theme.DeltaZero
-import com.lira.tracker.ui.theme.LiraHeartCoral
-import com.lira.tracker.ui.theme.TextMuted
-import com.lira.tracker.ui.theme.TextPrimary
-import com.lira.tracker.ui.theme.TextSecondary
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,16 +47,24 @@ fun MetricCard(
     lastSyncTimestamp: Long,
     modifier: Modifier = Modifier
 ) {
+    val themePrimary = MaterialTheme.colorScheme.primary
+    val themeSurface = MaterialTheme.colorScheme.surface
+    val themeOnSurface = MaterialTheme.colorScheme.onSurface
+    val themeOnSurfaceVariant = MaterialTheme.colorScheme.onSurfaceVariant
+    val themeOutline = MaterialTheme.colorScheme.outline
+
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = CardDefaults.outlinedCardBorder().copy(brush = Brush.horizontalGradient(listOf(DarkBorder, DarkBorder)))
+        colors = CardDefaults.cardColors(containerColor = themeSurface),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = Brush.horizontalGradient(listOf(themeOutline.copy(alpha = 0.6f), themeOutline.copy(alpha = 0.6f)))
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(22.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -74,30 +74,30 @@ fun MetricCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(LiraHeartCoral.copy(alpha = 0.15f)),
+                            .background(themePrimary.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.MusicNote,
                             contentDescription = null,
-                            tint = LiraHeartCoral,
+                            tint = themePrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(10.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
                             text = "Слушатели за месяц",
                             style = MaterialTheme.typography.titleMedium,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.SemiBold
+                            color = themeOnSurface,
+                            fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Артист ID: $artistId",
+                            text = "ID артиста: $artistId",
                             style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
+                            color = themeOnSurfaceVariant
                         )
                     }
                 }
@@ -119,14 +119,14 @@ fun MetricCard(
                 Text(
                     text = listenerFormatted,
                     style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
-                    color = TextPrimary,
+                    color = themeOnSurface,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "в месяц",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = themeOnSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
             }
@@ -151,13 +151,13 @@ fun MetricCard(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(if (record != null) DeltaPositive else TextMuted)
+                        .background(if (record != null) DeltaPositive else themeOnSurfaceVariant)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = lastUpdateStr,
                     style = MaterialTheme.typography.labelSmall,
-                    color = TextMuted
+                    color = themeOnSurfaceVariant
                 )
             }
         }
@@ -176,7 +176,7 @@ fun DeltaBadge(delta: Long) {
             Quad(DeltaNegative.copy(alpha = 0.15f), DeltaNegative, Icons.Default.ArrowDownward, formatted)
         }
         else -> {
-            Quad(DarkSurfaceVariant, DeltaZero, Icons.Default.Equalizer, "0")
+            Quad(MaterialTheme.colorScheme.surfaceVariant, DeltaZero, Icons.Default.Equalizer, "0")
         }
     }
 
